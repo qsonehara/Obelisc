@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: Obelisc
+Version: 0.0.1
+Summary: SNP streak-based nonparametric linkage analysis tool
+Home-page: https://github.com/qsonehara/Obelisc
+Author: Kyuto Sonehara
+Author-email: qsonehara@sg.med.osaka-u.ac.jp
+License: See https://www.python.org/psf/license/
+Description: README.md
+Platform: UNKNOWN
