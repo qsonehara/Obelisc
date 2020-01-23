@@ -1,7 +1,8 @@
 # Obelisc
 `obelisc` (**Ob**s**e**rvational **li**nkage **sc**an) is an identical-by-descent (IBD) mapping tool based on the SNP streak approach.
 
-<p><img src="https://github.com/qsonehara/Obelisc/blob/images/Obelisc_overview.png" width=1500px></p>
+<p><img src="https://github.com/qsonehara/Obelisc/blob/images/Obelisc_overview.png" width=800px></p>
+
 ## Overview
 
 `obelisc` is a command line tool to perform two effective nonparametric linkage analyses (i.e., SNP streak-based IBD mapping and runs of homozygosity (ROH) mapping). `obelisc` also supports an intuitive visualization of the analytical results.
@@ -24,7 +25,7 @@
 
 ## Installation
 
-`obelisc` can be installed using `pip`.
+`obelisc` can be installed using `pip`.
 
 ```
 pip3 install git+https://github.com/qsonehara/Obelisc
@@ -44,9 +45,9 @@ Here, `example` is the prefix of a PLINK binary fileset (i.e., example.fam, exam
 
 You can run `obelisc` with the example dataset provided as follows:
 
-``
+```
 obelisc hapmap3_r2_b36_fwd.consensus.qc.poly.JPT.example
-``
+```
 
 You can specify the filename of another case-specifying text file, the size of the scanning window, the minimum size of output stretches, the filename of mapping output, and the filename of the diagram of results as follows;
 
