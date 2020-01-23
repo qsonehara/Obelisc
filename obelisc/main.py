@@ -194,17 +194,19 @@ class Mapping():
                    f"\nNo.MinSNP:\t{numMinSNP}\n\nNo.Samples:\t{self.numSample}\nNo.Cases:\t{self.numCase}\n\n")
             f.write(out)
 
-            ROHwin = LOCH_MappingTools.MakeROHonWindowMulti(self.case_geno, self.Position)
-            StretchLongArray = LOCH_MappingTools.DecideROHStretchMulti(ROHwin)
+            ROHwin = LOCH_MappingTools.MakeROHonWindowMulti(self.case_geno, self.Position, Windowkb, numGapSNP, numMinSNP, Stretchkb, WindowGap)
+            StretchLongArray = LOCH_MappingTools.DecideROHStretchMulti(ROHwin, self.Position, Stretchkb)
             
             for i in range(self.numCase):    
-                numStretchLongCase = len(StretchLongArray[i]) if len(StretchLongArray[i][0]) else 0
+                numStretchLongCase = len(StretchLongArray[i]) if (StretchLongArray[i][0][1]) else 0
                 out = (f"\n\nNo.ROH_in_1_Case({self.case_list[i][1].decode('utf-8')}):\t{numStretchLongCase}"
-                       f"\n\nROH\tChr\tStart_SNP\tEnd_SNP\tStart_Position(bp)\tEnd_Position(bp)\tLength(bp)\n")
+                       f"\nROH\tChr\tStart_SNP\tEnd_SNP\tStart_Position(bp)\tEnd_Position(bp)\tLength(bp)\n")
                 f.write(out)
                 for j in range(len(StretchLongArray[i])):
                     start = StretchLongArray[i][j][0]
                     end = StretchLongArray[i][j][1]
+                    if end == 0:
+                        continue
                     L = [str(j+1), str(self.Chr[start]), self.SNPID[start].decode('utf-8'), self.SNPID[end].decode('utf-8'), 
                          str(self.bp[start]), str(self.bp[end]), f"{(self.bp[end] - self.bp[start])}\n"]
                     out = '\t'.join(L)
@@ -212,17 +214,19 @@ class Mapping():
 
             if self.numControl:
                 control_geno = self.snpdata.val[self.snpreader.iid_to_index(self.control_list)]
-                ROHwinControl = LOCH_MappingTools.MakeROHonWindowMulti(control_geno, self.Position)
-                StretchLongControl = LOCH_MappingTools.DecideROHStretchMulti(ROHwinControl)
+                ROHwinControl = LOCH_MappingTools.MakeROHonWindowMulti(control_geno, self.Position, Windowkb, numGapSNP, numMinSNP, Stretchkb, WindowGap)
+                StretchLongControl = LOCH_MappingTools.DecideROHStretchMulti(ROHwinControl, self.Position, Stretchkb)
 
             for i in range(self.numControl):    
-                numStretchLongControl = len(StretchLongControl[i]) if len(StretchLongControl[i][0]) else 0
+                numStretchLongControl = len(StretchLongControl[i]) if StretchLongControl[i][0][1] else 0
                 out = (f"\n\nNo.ROH_in_1_Control({self.control_list[i][1].decode('utf-8')}):\t{numStretchLongControl}"
-                       f"\n\nROH\tChr\tStart_SNP\tEnd_SNP\tStart_Position(bp)\tEnd_Position(bp)\tLength(bp)\n")
+                       f"\nROH\tChr\tStart_SNP\tEnd_SNP\tStart_Position(bp)\tEnd_Position(bp)\tLength(bp)\n")
                 f.write(out)
                 for j in range(len(StretchLongControl[i])):
                     start = StretchLongControl[i][j][0]
                     end = StretchLongControl[i][j][1]
+                    if end == 0:
+                        continue
                     L = [str(j+1), str(self.Chr[start]), self.SNPID[start].decode('utf-8'), self.SNPID[end].decode('utf-8'), 
                          str(self.bp[start]), str(self.bp[end]), f"{(self.bp[end] - self.bp[start])}\n"]
                     out = '\t'.join(L)

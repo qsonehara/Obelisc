@@ -77,11 +77,9 @@ cdef object MakeLOCHonWindow(int[:] flagLOCHSNP, np.ndarray[long long, ndim=1] P
         if WindowFlag:
             for k in range(WindowSt,WindowEd+1):
                 ret[k] = 1
-        #if WindowSt % 10000 == 0:
-        #    print(WindowSt)
     return ret
 
-cdef object DecideLOCHStretch(int[:] flagLOCHWindow, np.ndarray[long long, ndim=1] Position):
+cdef object DecideLOCHStretch(int[:] flagLOCHWindow, np.ndarray[long long, ndim=1] Position, int Stretchkb):
     cdef:
         unsigned int numSNP = len(flagLOCHWindow)
         int numStretch = 0
@@ -100,25 +98,11 @@ cdef object DecideLOCHStretch(int[:] flagLOCHWindow, np.ndarray[long long, ndim=
         if OnStretch == 1 and (flagLOCHWindow[i] == 0 or Position[i] - Position[i-1] > WindowGap * 1000):
             OnStretch = 0
             StEd.second = i - 1
-            ret.push_back(StEd)
-            numStretch += 1
+            if Position[StEd.second] - Position[StEd.first] >= Stretchkb * 1000:
+                ret.push_back(StEd)
+                numStretch += 1
     if not np.asarray(ret).any():
-        return np.array([[0,0]], dtype=np.int32, ndmin=2)
-    return np.array(ret, dtype=np.int32, ndmin=2)
-
-cdef object ExtractLOCHStretchLong(int[:,:] Stretch, np.ndarray[long long, ndim=1] Position, int Stretchkb):
-    cdef:
-        unsigned int numStretch = len(Stretch)
-        int i
-        vector[int[:]] ret
-    
-    for i in range(numStretch):
-        if Position[Stretch[i][1]] - Position[Stretch[i][0]] >= Stretchkb * 1000:
-            ret.push_back(Stretch[i])
-    
-    if not np.asarray(ret).any():
-        return np.array([[]], dtype=np.int32)
-    
+        return np.array([[]], dtype=np.int32, ndmin=2)
     return np.array(ret, dtype=np.int32, ndmin=2)
 
 cpdef object PointHitonStretch(int[:,:] Stretch, np.ndarray[long long, ndim=1] Position):
@@ -135,19 +119,17 @@ cpdef object PointHitonStretch(int[:,:] Stretch, np.ndarray[long long, ndim=1] P
         for j in range(numPoint):
             if Position[j] >= Position[Stretch[i][0]] and Position[j] <= Position[Stretch[i][1]]:
                 ret[j] = 1
-                #print(Position[j])
     return np.array(ret, dtype=np.int32)
 
 cpdef object LOCHMappingAll(np.ndarray[double, ndim=2] geno, np.ndarray[long long, ndim=1] Position, int Windowkb=1000, int numGapSNP=1, unsigned int numMinSNP=25, int Stretchkb=1000, unsigned int WindowGap=1000):
     cdef:
         int[:] flagLOCHSNP = CheckLOCH(geno)
         int[:] flagLOCHWindow = MakeLOCHonWindow(flagLOCHSNP, Position, Windowkb, numGapSNP, numMinSNP, WindowGap)
-        int[:,:] Stretch = DecideLOCHStretch(flagLOCHWindow, Position)
-        int[:,:] StretchLong = ExtractLOCHStretchLong(Stretch, Position, Stretchkb)
+        int[:,:] StretchLong = DecideLOCHStretch(flagLOCHWindow, Position, Stretchkb)
     return StretchLong
 
-cpdef object MakeROHonWindowMulti(np.ndarray[double, ndim=2] geno, np.ndarray[long long, ndim=1] Position, int Windowkb=1000, int numGapSNP=1,
-                                  unsigned int numMinSNP=25, int Stretchkb=1000, unsigned int WindowGap=1000):
+cpdef object MakeROHonWindowMulti(np.ndarray[double, ndim=2] geno, np.ndarray[long long, ndim=1] Position, int Windowkb, int numGapSNP,
+                                  unsigned int numMinSNP, int Stretchkb, unsigned int WindowGap):
     cdef:
         int numSNP = len(Position)
         int WindowSt
@@ -172,8 +154,6 @@ cpdef object MakeROHonWindowMulti(np.ndarray[double, ndim=2] geno, np.ndarray[lo
             if Position[WindowEd] - Position[WindowEd - 1] > WindowGap * 1000:
                 WindowEd -= 1
                 break
-        #if Position[WindowEd] - Position[WindowSt] > 100000000000 - 500000000:
-        #    WindowEd -= 1
         for j in range(WindowSt, WindowEd):
             if geno_single[j] == 1:
                 numObsGapSNP += 1
@@ -207,7 +187,7 @@ cpdef object MakeROHonWindowMulti(np.ndarray[double, ndim=2] geno, np.ndarray[lo
         ret[i] = ret_single
     return ret
 
-cpdef vector[pair[int, int]] DecideROHStretch(int[:] flagROHWindow):
+cpdef object DecideROHStretch(int[:] flagROHWindow, np.ndarray[long long, ndim=1] Position, int Stretchkb):
     cdef:
         int numSNP = len(flagROHWindow)
         int numStretch = 0
@@ -225,8 +205,9 @@ cpdef vector[pair[int, int]] DecideROHStretch(int[:] flagROHWindow):
         if OnStretch == 1 and flagROHWindow[i] == 0:
             OnStretch = 0
             StEd.second = i - 1
-            ret.push_back(StEd)
-            numStretch += 1
+            if Position[StEd.second] - Position[StEd.first] >= Stretchkb * 1000:
+                ret.push_back(StEd)
+                numStretch += 1
     if not np.asarray(ret).any():
         StEd.first = 0
         StEd.second = 0
@@ -234,11 +215,11 @@ cpdef vector[pair[int, int]] DecideROHStretch(int[:] flagROHWindow):
         return ret
     return ret
 
-cpdef object DecideROHStretchMulti(int[:,:] flagROHWindow):
+cpdef object DecideROHStretchMulti(int[:,:] flagROHWindow, np.ndarray[long long, ndim=1] Position, int Stretchkb):
     cdef:
         int i
         int numSample = len(flagROHWindow)
         vector[vector[pair[int, int]]] ret
     for i in range(numSample):
-        ret.push_back(DecideROHStretch(flagROHWindow[i]))
+        ret.push_back(DecideROHStretch(flagROHWindow[i], Position, Stretchkb))
     return ret

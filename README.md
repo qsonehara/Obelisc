@@ -1,8 +1,7 @@
 # Obelisc
 `obelisc` (**Ob**s**e**rvational **li**nkage **sc**an) is an identical-by-descent (IBD) mapping tool based on the SNP streak approach.
 
-![Obelisc](https://github.com/qsonehara/Obelisc/blob/images/Obelisc_overview.png)
-
+<p><img src="https://github.com/qsonehara/Obelisc/blob/images/Obelisc_overview.png" width=1500px></p>
 ## Overview
 
 `obelisc` is a command line tool to perform two effective nonparametric linkage analyses (i.e., SNP streak-based IBD mapping and runs of homozygosity (ROH) mapping). `obelisc` also supports an intuitive visualization of the analytical results.
@@ -25,7 +24,7 @@
 
 ## Installation
 
-`obelisc` can be installed using pip.
+`obelisc` can be installed using `pip`.
 
 ```
 pip3 install git+https://github.com/qsonehara/Obelisc
@@ -37,19 +36,29 @@ pip3 install git+https://github.com/qsonehara/Obelisc
 
 When you install `obelisc`, you get a simple command-line interface. You can perform SNP streak-based IBD mapping and ROH mapping by running the command `obelisc` as follows:
 
-`obelisc example`
+```
+obelisc example
+```
 
-Here, `example ` is the prefix of a PLINK binary fileset (i.e., example.fam, example.bim, and example.bed) and a text file specifying case individuals (i.e., example.case).
+Here, `example` is the prefix of a PLINK binary fileset (i.e., example.fam, example.bim, and example.bed) and a text file specifying case individuals (i.e., example.case).
+
+You can run `obelisc` with the example dataset provided as follows:
+
+``
+obelisc hapmap3_r2_b36_fwd.consensus.qc.poly.JPT.example
+``
 
 You can specify the filename of another case-specifying text file, the size of the scanning window, the minimum size of output stretches, the filename of mapping output, and the filename of the diagram of results as follows;
 
-`obelisc example -c case_file.case -w 1500 -s 1500 -o example_ibdmapping -f example_out.pdf`
+```
+obelisc example -c case_file.case -w 1500 -s 1500 -o example_ibdmapping -f example_out.pdf
+```
 
 #### Options
 
 | Option name                    | Descriptions                                                 | Default                            |
 | ------------------------------ | ------------------------------------------------------------ | ---------------------------------- |
-| `--case`, `-c`                 | a case file name                                             | {the first argument}.case          |
+| `--case`, `-c`                 | the case file name                                           | {the first argument}.case          |
 | `--ibd-win-kb`, `-w`           | the sliding window size during IBD mapping (kb) (regarding SNP streak mapping) | 1500                               |
 | `--ibd-str-kb`, `-s`           | the minimum size of outputted IBD stretches (kb) (regarding SNP streak mapping) | 1500                               |
 | `--ibd-inconsistent-snp`, `-i` | the maximum number of markers in a scanning window inconsistent with the SNP streak condition  (regarding SNP streak mapping) | 1                                  |
