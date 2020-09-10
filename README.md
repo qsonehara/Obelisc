@@ -46,7 +46,7 @@ Here, `example` is the prefix of a PLINK binary fileset (i.e., example.fam, exam
 You can run `obelisc` with the example dataset provided as follows:
 
 ```
-obelisc hapmap3_r2_b36_fwd.consensus.qc.poly.JPT.example
+obelisc hapmap3_r2_b37_fwd.consensus.qc.poly.JPT.example
 ```
 
 You can specify the filename of another case-specifying text file, the size of the scanning window, the minimum size of output stretches, the filename of mapping output, and the filename of the diagram of results as follows;

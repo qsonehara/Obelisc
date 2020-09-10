@@ -5,6 +5,7 @@ cimport numpy as np
 
 from libcpp.vector cimport vector
 from libcpp.pair cimport pair
+from libc.stdio cimport printf
 
 cdef CheckLOCH(np.ndarray[double, ndim=2] geno):
     cdef:
@@ -32,43 +33,18 @@ cdef object MakeLOCHonWindow(int[:] flagLOCHSNP, np.ndarray[long long, ndim=1] P
         int[:] ret = np.zeros(numSNP, dtype=np.int32)
         int i, j, k
         int WindowFlag
-        int numObsGapSNP = 0
-    while(Position[WindowEd] - Position[WindowSt] < Windowkb * 1000 and WindowEd < numSNP - 1):
-        WindowEd += 1
-        if Position[WindowEd] - Position[WindowEd - 1] > WindowGap * 1000:
-            WindowEd -= 1
-            break
-    WindowFlag = True
-    for j in range(WindowSt, WindowEd+1):
-        if flagLOCHSNP[j] == 0:
-            numObsGapSNP += 1
-    if numObsGapSNP > numGapSNP:
-        WindowFlag = False
-    if WindowEd - WindowSt + 1 < numMinSNP:
-        WindowFlag = False
-    if WindowFlag:
-        for k in range(WindowSt,WindowEd+1):
-            ret[k] = 1
-    flagBreak = False
+        int numObsGapSNP = 2 - flagLOCHSNP[WindowSt] - flagLOCHSNP[WindowEd]
     while(WindowSt < numSNP - 1):
-        if flagLOCHSNP[WindowSt] == 0:
-            numObsGapSNP -= 1
-        WindowSt += 1
         while(Position[WindowEd] - Position[WindowSt] < Windowkb * 1000 and WindowEd < numSNP - 1):
             WindowEd += 1
             if flagLOCHSNP[WindowEd] == 0:
                 numObsGapSNP += 1
             if Position[WindowEd] - Position[WindowEd - 1] > WindowGap * 1000:
-                WindowEd -= 1
-                if flagLOCHSNP[WindowEd+1] == 0:
-                    numObsGapSNP -= 1
-                flagBreak = True
-                break
-        if flagBreak:
-            WindowSt, WindowEd = WindowEd, WindowEd + 1
-            numObsGapSNP = 2 - flagLOCHSNP[WindowSt] - flagLOCHSNP[WindowEd]
-            flagBreak = False
-            continue
+                WindowSt, WindowEd = WindowEd, WindowEd + 1
+                numObsGapSNP = 2 - flagLOCHSNP[WindowSt] - flagLOCHSNP[WindowEd]
+                continue
+        if WindowEd >= numSNP - 1:
+            break
         WindowFlag = True
         if numObsGapSNP > numGapSNP:
             WindowFlag = False
@@ -77,6 +53,9 @@ cdef object MakeLOCHonWindow(int[:] flagLOCHSNP, np.ndarray[long long, ndim=1] P
         if WindowFlag:
             for k in range(WindowSt,WindowEd+1):
                 ret[k] = 1
+        if flagLOCHSNP[WindowSt] == 0:
+            numObsGapSNP -= 1
+        WindowSt += 1
     return ret
 
 cdef object DecideLOCHStretch(int[:] flagLOCHWindow, np.ndarray[long long, ndim=1] Position, int Stretchkb):
@@ -87,7 +66,7 @@ cdef object DecideLOCHStretch(int[:] flagLOCHWindow, np.ndarray[long long, ndim=
         int StretchSt = 0
         int StretchEd = 0
         unsigned int WindowGap = 1000
-        int i
+        int i = 0
         pair[int, int] StEd
         vector[pair[int, int]] ret
     
@@ -95,12 +74,22 @@ cdef object DecideLOCHStretch(int[:] flagLOCHWindow, np.ndarray[long long, ndim=
         if OnStretch == 0 and flagLOCHWindow[i] == 1:
             OnStretch = 1
             StEd.first = i
-        if OnStretch == 1 and (flagLOCHWindow[i] == 0 or Position[i] - Position[i-1] > WindowGap * 1000):
+        elif OnStretch == 1 and (flagLOCHWindow[i] == 0 or Position[i] - Position[i-1] > WindowGap * 1000):
             OnStretch = 0
             StEd.second = i - 1
             if Position[StEd.second] - Position[StEd.first] >= Stretchkb * 1000:
                 ret.push_back(StEd)
                 numStretch += 1
+            # if window is broken, a new window may start
+            if flagLOCHWindow[i] == 1 and Position[i] - Position[i-1] > WindowGap * 1000:
+                OnStretch = 1
+                StEd.first = i
+    # loop end processing
+    if OnStretch == 1:
+        StEd.second = i
+        if Position[StEd.second] - Position[StEd.first] >= Stretchkb * 1000:
+            ret.push_back(StEd)
+            numStretch += 1
     if not np.asarray(ret).any():
         return np.array([[]], dtype=np.int32, ndmin=2)
     return np.array(ret, dtype=np.int32, ndmin=2)
@@ -144,50 +133,37 @@ cpdef object MakeROHonWindowMulti(np.ndarray[double, ndim=2] geno, np.ndarray[lo
         double[:] geno_single
     
     for i in range(numSample):
-        numObsGapSNP = 0
         ret_single = np.zeros(geno.shape[1], dtype=np.int32)
         geno_single = geno[i]
         WindowSt = 0
         WindowEd = 1
-        while(Position[WindowEd] - Position[WindowSt] < Windowkb * 1000 and WindowEd < numSNP - 1):
-            WindowEd += 1
-            if Position[WindowEd] - Position[WindowEd - 1] > WindowGap * 1000:
-                WindowEd -= 1
-                break
-        for j in range(WindowSt, WindowEd):
-            if geno_single[j] == 1:
-                numObsGapSNP += 1
-        if WindowEd - WindowSt + 1 >= numMinSNP:
-            if numObsGapSNP <= numGapSNP:
-                for k in range(WindowSt,WindowEd):
-                    ret_single[k] = 1
+        numObsGapSNP = <int>(geno_single[WindowSt] == 1) + <int>(geno_single[WindowEd] == 1)
         while(WindowSt < numSNP - 1):
+            while(Position[WindowEd] - Position[WindowSt] < Windowkb * 1000 and WindowEd < numSNP - 1):
+                WindowEd += 1
+                if geno_single[WindowEd] == 1:
+                    numObsGapSNP += 1
+                if Position[WindowEd] - Position[WindowEd - 1] > WindowGap * 1000:
+                    WindowSt, WindowEd = WindowEd, WindowEd + 1
+                    numObsGapSNP = <int>(geno_single[WindowSt] == 1) + <int>(geno_single[WindowEd] == 1)
+                    continue
+            if WindowEd >= numSNP - 1:
+                break
+            WindowFlag = True
+            if numObsGapSNP > numGapSNP:
+                WindowFlag = False
+            if WindowEd - WindowSt + 1 < numMinSNP:
+                WindowFlag = False
+            if WindowFlag:
+                for k in range(WindowSt,WindowEd+1):
+                    ret_single[k] = 1
             if geno_single[WindowSt] == 1:
                 numObsGapSNP -= 1
             WindowSt += 1
-            while(Position[WindowEd] - Position[WindowSt] < Windowkb * 1000 and WindowEd < numSNP - 1):
-                WindowEd += 1
-                if geno_single[WindowEd-1] == 1:
-                    numObsGapSNP += 1
-                if Position[WindowEd] - Position[WindowEd - 1] > WindowGap * 1000:
-                    WindowEd -= 1
-                    if geno_single[WindowEd] == 1:
-                        numObsGapSNP -= 1
-                    flagBreak = True
-                    break
-            if flagBreak:
-                WindowSt, WindowEd = WindowEd, WindowEd + 1
-                numObsGapSNP = <int>(geno_single[WindowSt] + geno_single[WindowEd])
-                flagBreak = False
-                continue
-            if WindowEd - WindowSt + 1 >= numMinSNP:
-                if numObsGapSNP <= numGapSNP:
-                    for k in range(WindowSt,WindowEd):
-                        ret_single[k] = 1
         ret[i] = ret_single
     return ret
 
-cpdef object DecideROHStretch(int[:] flagROHWindow, np.ndarray[long long, ndim=1] Position, int Stretchkb):
+cpdef object DecideROHStretch(int[:] flagROHWindow, np.ndarray[long long, ndim=1] Position, int Stretchkb, unsigned int WindowGap):
     cdef:
         int numSNP = len(flagROHWindow)
         int numStretch = 0
@@ -202,12 +178,28 @@ cpdef object DecideROHStretch(int[:] flagROHWindow, np.ndarray[long long, ndim=1
         if OnStretch == 0 and flagROHWindow[i] == 1:
             OnStretch = 1
             StEd.first = i
-        if OnStretch == 1 and flagROHWindow[i] == 0:
+            #printf("StEd.first: %I64d \n", Position[StEd.first])
+        elif OnStretch == 1 and (flagROHWindow[i] == 0 or Position[i] - Position[i - 1] > WindowGap * 1000):
             OnStretch = 0
             StEd.second = i - 1
+            #printf("StEd.second: %I64d \n", Position[StEd.second])
             if Position[StEd.second] - Position[StEd.first] >= Stretchkb * 1000:
                 ret.push_back(StEd)
+                #printf("Set region: %I64d - %I64d \n", Position[StEd.first], Position[StEd.second])
                 numStretch += 1
+            # if window is broken, a new window may start
+            if flagROHWindow[i] == 1 and Position[i] - Position[i-1] > WindowGap * 1000:
+                OnStretch = 1
+                StEd.first = i
+                #printf("StEd.first: %I64d \n", Position[StEd.first])
+    # loop end processing
+    if OnStretch == 1:
+        StEd.second = i
+        #printf("StEd.second: %I64d \n", Position[StEd.second])
+        if Position[StEd.second] - Position[StEd.first] >= Stretchkb * 1000:
+            ret.push_back(StEd)
+            #printf("Set region: %I64d - %I64d \n", Position[StEd.first], Position[StEd.second])
+            numStretch += 1
     if not np.asarray(ret).any():
         StEd.first = 0
         StEd.second = 0
@@ -215,11 +207,11 @@ cpdef object DecideROHStretch(int[:] flagROHWindow, np.ndarray[long long, ndim=1
         return ret
     return ret
 
-cpdef object DecideROHStretchMulti(int[:,:] flagROHWindow, np.ndarray[long long, ndim=1] Position, int Stretchkb):
+cpdef object DecideROHStretchMulti(int[:,:] flagROHWindow, np.ndarray[long long, ndim=1] Position, int Stretchkb, unsigned int WindowGap):
     cdef:
         int i
         int numSample = len(flagROHWindow)
         vector[vector[pair[int, int]]] ret
     for i in range(numSample):
-        ret.push_back(DecideROHStretch(flagROHWindow[i], Position, Stretchkb))
+        ret.push_back(DecideROHStretch(flagROHWindow[i], Position, Stretchkb, WindowGap))
     return ret

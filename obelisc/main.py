@@ -77,7 +77,7 @@ class Mapping():
             if point:
                 PointHitFlag = LOCH_MappingTools.PointHitonStretch(StretchLong, self.Position)
             numStretchLong = len(StretchLong) if len(StretchLong[0]) else 0
-            out = 'No.IBD stretch CaseOnly:\t{0}'.format(numStretchLong)
+            out = f'No.IBD stretch CaseOnly:\t{numStretchLong}'
             print(out)
             out = (f"\nNo.IBD_Stretch_in_All_Cases:\t{numStretchLong}\nIBD_stretch\tChr\tStart_SNP\tEnd_SNP"
                    f"\tStart_Position(bp)\tEnd_Position(bp)\tLength(bp)\n")
@@ -195,7 +195,7 @@ class Mapping():
             f.write(out)
 
             ROHwin = LOCH_MappingTools.MakeROHonWindowMulti(self.case_geno, self.Position, Windowkb, numGapSNP, numMinSNP, Stretchkb, WindowGap)
-            StretchLongArray = LOCH_MappingTools.DecideROHStretchMulti(ROHwin, self.Position, Stretchkb)
+            StretchLongArray = LOCH_MappingTools.DecideROHStretchMulti(ROHwin, self.Position, Stretchkb, WindowGap)
             
             for i in range(self.numCase):    
                 numStretchLongCase = len(StretchLongArray[i]) if (StretchLongArray[i][0][1]) else 0
@@ -215,7 +215,7 @@ class Mapping():
             if self.numControl:
                 control_geno = self.snpdata.val[self.snpreader.iid_to_index(self.control_list)]
                 ROHwinControl = LOCH_MappingTools.MakeROHonWindowMulti(control_geno, self.Position, Windowkb, numGapSNP, numMinSNP, Stretchkb, WindowGap)
-                StretchLongControl = LOCH_MappingTools.DecideROHStretchMulti(ROHwinControl, self.Position, Stretchkb)
+                StretchLongControl = LOCH_MappingTools.DecideROHStretchMulti(ROHwinControl, self.Position, Stretchkb, WindowGap)
 
             for i in range(self.numControl):    
                 numStretchLongControl = len(StretchLongControl[i]) if StretchLongControl[i][0][1] else 0
@@ -287,13 +287,15 @@ class Mapping():
 
     def draw_diagram(self, fig_name):
         '''Draws diagrams of mapping results'''
-        chr_list = np.unique(self.Chr)
-        chr_length = pd.DataFrame(self.snpdata.pos).groupby(0, as_index=False).max()
-        size = len(chr_list)
+        chr_length = [249250621, 243199373, 198022430, 191154276, 180915260, 171115067, 159138663, 146364022, 141213431, 135534747, 135006516, 133851895, 115169878, 107349540, 102531392, 90354753, 81195210, 78077248, 59128983, 63025520, 48129895, 51304566]
+        chr_names = list(range(1,23))
+        #chr_list = np.unique(self.Chr)
+        #chr_length = pd.DataFrame(self.snpdata.pos).groupby(0, as_index=False).max()
+        size = 22
         gap_length = 10 ** 7
         array = np.triu(np.ones((size,size))).T
         gap = np.full(size, gap_length)
-        global_len = np.dot(array, chr_length[2] + gap)
+        global_len = np.dot(array, chr_length + gap)
         global_len = np.insert(global_len, 0, 0)
         global_len += gap_length
         fig = plt.figure(figsize=(15,5))
@@ -312,8 +314,8 @@ class Mapping():
         ax1.tick_params(axis='both', which='both', length=0)
         ax1.axhline(0, color='k', linewidth=0.5)
         ax1.axhline(1, color='k', linewidth=0.5, ls='--')
-        for i in range(len(chr_list)):
-            ax1.add_patch(plt.Rectangle(xy=[global_len[i], -0.1], width=chr_length[2][i], height=0.05, color=cmap(i%10)))
+        for i in range(size):
+            ax1.add_patch(plt.Rectangle(xy=[global_len[i], -0.1], width=chr_length[i], height=0.05, color=cmap(i%10)))
         for i, reg in enumerate(self.ibd_regions):
             if reg[1][0]!=0:
                 prop = 1 - sum(reg[1][1:])/self.numControl if self.numControl else 1.0
@@ -325,7 +327,7 @@ class Mapping():
                               height=0.03, color='r'))
         ax2.set_ylim(-self.numCase*0.1, self.numCase)
         ax2.set_xticks([(global_len[i] + global_len[i+1])/2 for i in range(StChr, EdChr)])
-        ax2.set_xticklabels([i for i in np.unique(self.snpdata.pos[:, 0])])
+        ax2.set_xticklabels([i for i in chr_names])
         ax2.set_ylabel('ROH in Cases')
         ax2.title.set_text('Runs of homozygosity detection results')
         ax2.spines['bottom'].set_visible(False)
@@ -333,8 +335,8 @@ class Mapping():
         ax2.tick_params(axis='both', which='both', length=0)
         ax2.axhline(0, color='k', linewidth=0.5)
         ax2.axhline(self.numCase, color='k', linewidth=0.5, ls='--')
-        for i in range(len(chr_list)):
-            ax2.add_patch(plt.Rectangle(xy=[global_len[i], -self.numCase * 0.1], width=chr_length[2][i],
+        for i in range(size):
+            ax2.add_patch(plt.Rectangle(xy=[global_len[i], -self.numCase * 0.1], width=chr_length[i],
                                         height=self.numCase * 0.05, color=cmap(i%10)))
         for i, reg in enumerate(self.roh_case_regions):
             numROH = np.sum(reg[1])
