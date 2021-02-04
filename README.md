@@ -9,6 +9,13 @@
 
 `obelisc` requires no predefined inheritance model with parameters and is applicable to both dominant and recessive traits.
 
+## Citation
+
+If you use Obelisc or any material in this repository, please cite
+
+
+[Sonehara K and Okada Y. Obelisc: an identical-by-descent mapping tool based on SNP streak.
+*Bioinformatics*, 2020.](https://doi.org/10.1093/bioinformatics/btaa940)
 
 
 ## Requirements
