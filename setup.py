@@ -20,7 +20,7 @@ else:
 
 setup(
     name='Obelisc',
-    version='0.0.1',
+    version='0.0.2',
     description='SNP streak-based nonparametric linkage analysis tool',
     long_description="README.md",
     author='Kyuto Sonehara',
@@ -28,7 +28,7 @@ setup(
     url='https://github.com/qsonehara/Obelisc',
     license=license,
     packages=find_packages(exclude=('tests', 'docs')),
-    install_requires=["numpy","pandas","matplotlib","pysnptools","argparse"],
+    install_requires=["numpy","pandas","matplotlib","pysnptools>=0.4.6","argparse"],
     entry_points={
         "console_scripts": [
             "obelisc = obelisc.main:main"

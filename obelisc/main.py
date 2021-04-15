@@ -34,17 +34,17 @@ class Mapping():
         self.prefix = prefix
         self.case_file = case_file
         self.snpreader = Bed(f"{prefix}.bed", count_A1=False)
-        if self.snpreader.pos.dtype != 'int64':
-            self.snpreader.pos[:,0] = np.vectorize(replace)(self.snpreader.pos[:,0])
+        self.snpreader.pos[:,0] = np.vectorize(replace)(self.snpreader.pos[:,0]).astype(np.int64)
         self.snpreader.pos[:,1] = self.snpreader.pos[:,0] * 100000000000 + self.snpreader.pos[:,2]
         self.snpdata = self.snpreader.read()
         print('SNP data loaded.')
-        self.chr_list = list(set(self.snpreader.pos[:,0]))
-        self.Chr = self.snpreader.pos[:,0]
-        self.Position =  self.snpreader.pos[:,1]
-        self.bp =  self.snpreader.pos[:,2]
+        self.Chr = self.snpreader.pos[:,0].astype(np.int64)
+        self.chr_list = list(set(self.Chr))
+        self.Position =  self.snpreader.pos[:,1].astype(np.int64)
+        self.bp =  self.snpreader.pos[:,2].astype(np.int64)
         self.SNPID = self.snpreader.sid
-        self.case = np.loadtxt(case_file, dtype=self.snpreader.iid.dtype)[:,:2]
+        self.case = np.loadtxt(case_file, dtype=np.str_)[:,:2]
+        self.case_geno = self.snpdata.val[self.snpreader.iid_to_index(self.case)]
         self.case_list = list(self.case)
         self.all_list = list([tuple(x) for x in self.snpreader.iid])
         self.caseset = set([tuple(x) for x in self.case])
@@ -53,10 +53,7 @@ class Mapping():
         self.numSample = len(self.all_list)
         self.numCase = len(self.case_list)
         self.numControl = len(self.control_list)
-        self.case_geno = self.snpdata.val[self.snpreader.iid_to_index(self.case)]
-        L = []
-        for i in self.case_list:
-            L.append(i[1].decode('utf-8'))
+        L = [i[1] for i in self.case_list]
         self.case_list_print = '\n'.join(L)
         print('Case individuals are: \n')
         print(self.case_list_print)
@@ -85,7 +82,7 @@ class Mapping():
             for i in range(numStretchLong):
                 start = StretchLong[i][0]
                 end = StretchLong[i][1]
-                L = [str(i+1), str(self.Chr[start]), self.SNPID[start].decode('utf-8'), self.SNPID[end].decode('utf-8'),
+                L = [str(i+1), str(self.Chr[start]), self.SNPID[start], self.SNPID[end],
                      str(self.bp[start]), str(self.bp[end]), f"{(self.bp[end] - self.bp[start])}\n"]
                 out = '\t'.join(L)
                 f.write(out)
@@ -102,7 +99,7 @@ class Mapping():
                         PointHitFlagControl = LOCH_MappingTools.PointHitonStretch(StretchLongControl[i], self.Position)
                         PointHitResult[i] = PointHitFlagControl
                     numStretchLongControl = len(StretchLongControl[i]) if len(StretchLongControl[i][0]) else 0
-                    out = (f"\nNo.IBD_stretch_in_All_Cases_and_1_Control({self.control_list[i][1].decode('utf-8')}):\t{numStretchLongControl}"
+                    out = (f"\nNo.IBD_stretch_in_All_Cases_and_1_Control({self.control_list[i][1]}):\t{numStretchLongControl}"
                         f"\nIBD_stretch\tChr\tStart_SNP\tEnd_SNP\tStart_Position(bp)\tEnd_Position(bp)\tLength(bp)\n")
                     f.write(out)
                     numStretchLongControl = len(StretchLongControl[i])
@@ -111,7 +108,7 @@ class Mapping():
                     for j in range(numStretchLongControl):
                         start = StretchLongControl[i][j][0]
                         end = StretchLongControl[i][j][1]
-                        L = [str(j+1), str(self.Chr[start]), self.SNPID[start].decode('utf-8'), self.SNPID[end].decode('utf-8'),
+                        L = [str(j+1), str(self.Chr[start]), self.SNPID[start], self.SNPID[end],
                             str(self.bp[start]), str(self.bp[end]), f"{(self.bp[end] - self.bp[start])}\n"]
                         out = '\t'.join(L)
                         f.write(out)
@@ -127,13 +124,13 @@ class Mapping():
                 f.write(out)
                 L = []
                 for i in range(len(self.control_list)):
-                    L.append("\t{0}_in_IBD(Yes:1/No:0)".format(self.control_list[i][1].decode('utf-8')))
+                    L.append("\t{0}_in_IBD(Yes:1/No:0)".format(self.control_list[i][1]))
                 L.append('\n')
                 out = ''.join(L)
                 f.write(out)
                 for j in range(len(PointHitFlag)):
                     if PointHitFlag[j]:
-                        L = [f"{self.SNPID[j].decode('utf-8')}\t{str(self.Chr[j])}\t{str(self.bp[j])}"
+                        L = [f"{self.SNPID[j]}\t{str(self.Chr[j])}\t{str(self.bp[j])}"
                         f"\t{str(len(self.case_list))}\t{str(PointHitSumControl[j])}\t{PointHitFlag[j]}"]
                         for i in range(len(PointHitResult)):
                             L.append(f'\t{PointHitResult[i][j]}')
@@ -199,7 +196,7 @@ class Mapping():
             
             for i in range(self.numCase):    
                 numStretchLongCase = len(StretchLongArray[i]) if (StretchLongArray[i][0][1]) else 0
-                out = (f"\n\nNo.ROH_in_1_Case({self.case_list[i][1].decode('utf-8')}):\t{numStretchLongCase}"
+                out = (f"\n\nNo.ROH_in_1_Case({self.case_list[i][1]}):\t{numStretchLongCase}"
                        f"\nROH\tChr\tStart_SNP\tEnd_SNP\tStart_Position(bp)\tEnd_Position(bp)\tLength(bp)\n")
                 f.write(out)
                 for j in range(len(StretchLongArray[i])):
@@ -207,7 +204,7 @@ class Mapping():
                     end = StretchLongArray[i][j][1]
                     if end == 0:
                         continue
-                    L = [str(j+1), str(self.Chr[start]), self.SNPID[start].decode('utf-8'), self.SNPID[end].decode('utf-8'), 
+                    L = [str(j+1), str(self.Chr[start]), self.SNPID[start], self.SNPID[end], 
                          str(self.bp[start]), str(self.bp[end]), f"{(self.bp[end] - self.bp[start])}\n"]
                     out = '\t'.join(L)
                     f.write(out)
@@ -219,7 +216,7 @@ class Mapping():
 
             for i in range(self.numControl):    
                 numStretchLongControl = len(StretchLongControl[i]) if StretchLongControl[i][0][1] else 0
-                out = (f"\n\nNo.ROH_in_1_Control({self.control_list[i][1].decode('utf-8')}):\t{numStretchLongControl}"
+                out = (f"\n\nNo.ROH_in_1_Control({self.control_list[i][1]}):\t{numStretchLongControl}"
                        f"\nROH\tChr\tStart_SNP\tEnd_SNP\tStart_Position(bp)\tEnd_Position(bp)\tLength(bp)\n")
                 f.write(out)
                 for j in range(len(StretchLongControl[i])):
@@ -227,7 +224,7 @@ class Mapping():
                     end = StretchLongControl[i][j][1]
                     if end == 0:
                         continue
-                    L = [str(j+1), str(self.Chr[start]), self.SNPID[start].decode('utf-8'), self.SNPID[end].decode('utf-8'), 
+                    L = [str(j+1), str(self.Chr[start]), self.SNPID[start], self.SNPID[end], 
                          str(self.bp[start]), str(self.bp[end]), f"{(self.bp[end] - self.bp[start])}\n"]
                     out = '\t'.join(L)
                     f.write(out)    
