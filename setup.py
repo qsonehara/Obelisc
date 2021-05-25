@@ -26,7 +26,6 @@ setup(
     author='Kyuto Sonehara',
     author_email='qsonehara@sg.med.osaka-u.ac.jp',
     url='https://github.com/qsonehara/Obelisc',
-    license=license,
     packages=find_packages(exclude=('tests', 'docs')),
     install_requires=["numpy","pandas","matplotlib","pysnptools>=0.4.6","argparse"],
     entry_points={
